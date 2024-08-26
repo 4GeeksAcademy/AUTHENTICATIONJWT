@@ -1,51 +1,55 @@
 """
-This module takes care of starting the API Server, Loading the DB and Adding the endpoints
+This module defines API routes and handles requests.
 """
-import app
-from flask import Flask, request, jsonify, url_for, Blueprint
+from flask import Blueprint, Flask, jsonify, request
 from api.models import db, User
-from api.utils import generate_sitemap, APIException
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 api = Blueprint('api', __name__)
+CORS(api, support_credentials=True)
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///your-database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
-# Allow CORS requests to this API
-CORS(api)
-
-
-@api.route('/hello', methods=['POST', 'GET'])
+@api.route('/api/hello', methods=['POST', 'GET'])
 def handle_hello():
-
     response_body = {
         "message": "Hello! I'm a message that came from the backend, check the network tab on the google inspector and you will see the GET request"
     }
-
     return jsonify(response_body), 200
 
+# Obtener todos los usuarios
+@api.route('/api/usuarios', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    return jsonify([user.serialize() for user in users]), 200
 
-# OBTENER TODOS LOS USUARIOS:
-
-@api.route ('/usuarios', methods = ['GET'])
-def todos_los_usuarios():
-    usuarios = User.query.all()
-
-    return jsonify(usuarios.serialize()), 201
-
-# REGISTRO DE USUARIOS:
-
-@api.route ('/registro', methods = ['POST'])
-def crear_usuario():
+@api.route('/api/registro', methods=['POST'])
+def create_user():
     data = request.get_json()
-    email = data.get('email')
-    password = data.get ('password')
 
-    # VERIFICACION
-    usuario = User.query.filter_by (email = email).first ()
-    if usuario :
-        return jsonify({'error': 'El usuario existe'}), 400
-    
-    # CREAR UN NUEVO USUARIO
-    usuario = User(id = User.query.coun() + 1, email = email, password = password, is_active = True)
-    db.session.add(usuario)
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email y contraseña son requeridos"}), 400
+
+    # Verificar si el usuario ya existe
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        return jsonify({"error": "El usuario ya está registrado"}), 409
+
+    # Crear un nuevo usuario
+    new_user = User(
+        email=email,
+        password_hash=generate_password_hash(password)
+    )
+    db.session.add(new_user)
     db.session.commit()
-    return jsonify(usuario.serialize()), 201     
+
+    return jsonify({"message": "Usuario registrado exitosamente"}), 201
+
+if __name__ == "__main__":
+    app.run(debug=True)

@@ -1,6 +1,5 @@
-
-import axios from "axios";
 import React, { useState } from "react";
+import axios from "axios";
 
 export const SignUp = () => {
     const [signupData, setSignUpData] = useState({
@@ -17,15 +16,19 @@ export const SignUp = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+    
         try {
-            const response = await axios.post(process.env.BACKEND_URL + "/registro", signupData, {
-                headers: { "Content-Type": "application/json" }
-            });
-            console.log("Respuesta del servidor:", response); // Verifica la respuesta del servidor
+            const response = await axios.post(
+                process.env.BACKEND_URL + "/api/registro", 
+                signupData, // Enviar los datos en el cuerpo de la solicitud
+                {
+                    headers: { "Content-Type": "application/json" }, // Establecer el tipo de contenido
+                }
+            );
+            console.log("Respuesta del servidor:", response);
             console.log("Usuario registrado:", response.data);
         } catch (error) {
-            console.error("Ha habido un error:", error);
+            console.log("Ha habido un error: " + error);
         }
     };
 
